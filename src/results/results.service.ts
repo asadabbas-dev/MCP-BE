@@ -46,6 +46,18 @@ export class ResultsService {
     });
   }
 
+  /**
+   * Find grades by course ID
+   * Used by teachers to see all grades for a specific course
+   */
+  async findByCourse(courseId: string): Promise<Grade[]> {
+    return this.gradesRepository.find({
+      where: { courseId },
+      relations: ['student', 'student.user', 'course'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async calculateCGPA(studentId: string): Promise<number> {
     const grades = await this.gradesRepository.find({
       where: { studentId },

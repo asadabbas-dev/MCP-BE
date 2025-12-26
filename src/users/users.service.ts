@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { User } from './entities/user.entity';
 import { Course } from '../courses/entities/course.entity';
+import { Enrollment } from '../enrollments/entities/enrollment.entity';
+import { AssignmentSubmission } from '../assignments/entities/assignment-submission.entity';
 import * as bcrypt from 'bcrypt';
 
 /**
@@ -18,6 +20,10 @@ export class UsersService {
     private usersRepository: Repository<User>,
     @InjectRepository(Course)
     private coursesRepository: Repository<Course>,
+    @InjectRepository(Enrollment)
+    private enrollmentsRepository: Repository<Enrollment>,
+    @InjectRepository(AssignmentSubmission)
+    private submissionsRepository: Repository<AssignmentSubmission>,
   ) {}
 
   /**
@@ -193,6 +199,52 @@ export class UsersService {
       totalTeachers: teachers,
       totalCourses: courses,
       activeUsers: activeUsers,
+    };
+  }
+
+  /**
+   * Get teacher dashboard statistics
+   * Returns assigned courses count, total students, pending submissions, etc.
+   */
+  async getTeacherStats(teacherId: string) {
+    // Get all courses assigned to this teacher
+    const courses = await this.coursesRepository.find({
+      where: { teacherId, isActive: true },
+      relations: ['enrollments'],
+    });
+
+    // Count total students across all courses
+    const courseIds = courses.map((c) => c.id);
+    const totalStudents = courseIds.length > 0
+      ? await this.enrollmentsRepository.count({
+          where: { courseId: In(courseIds), isActive: true },
+        })
+      : 0;
+
+    // Count pending submissions (submissions without grades)
+    // Note: This requires joining with assignments table, simplified for now
+    const pendingSubmissions = courseIds.length > 0
+      ? await this.submissionsRepository
+          .createQueryBuilder('submission')
+          .innerJoin('submission.assignment', 'assignment')
+          .where('assignment.courseId IN (:...courseIds)', { courseIds })
+          .andWhere('submission.marksObtained IS NULL')
+          .getCount()
+      : 0;
+
+    // Count ungraded submissions (submissions that need grading)
+    const ungradedSubmissions = pendingSubmissions; // Same as pending for now
+
+    // Count pending requests (if requests module exists)
+    // For now, return 0
+    const pendingRequests = 0;
+
+    return {
+      assignedCourses: courses.length,
+      totalStudents,
+      pendingSubmissions,
+      ungradedSubmissions,
+      pendingRequests,
     };
   }
 }

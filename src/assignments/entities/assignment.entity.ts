@@ -35,6 +35,12 @@ export class Assignment {
   @Column({ type: 'timestamp' })
   dueDate: Date;
 
+  @Column()
+  semester: string; // e.g., "Fall 2024", "Spring 2024"
+
+  @Column({ nullable: true })
+  section: string; // e.g., "A", "B", "Morning" (optional - can be null for all sections)
+
   @CreateDateColumn()
   createdAt: Date;
 

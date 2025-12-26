@@ -24,6 +24,7 @@ export class AssignmentsService {
     const assignment = this.assignmentsRepository.create({
       ...createAssignmentDto,
       dueDate: new Date(createAssignmentDto.dueDate),
+      section: createAssignmentDto.section || null, // Allow null for all sections
     });
     return this.assignmentsRepository.save(assignment);
   }

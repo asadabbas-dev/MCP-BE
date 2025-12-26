@@ -4,12 +4,15 @@ import { Repository } from 'typeorm';
 import { Course } from './entities/course.entity';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
+import { Enrollment } from '../enrollments/entities/enrollment.entity';
 
 @Injectable()
 export class CoursesService {
   constructor(
     @InjectRepository(Course)
     private coursesRepository: Repository<Course>,
+    @InjectRepository(Enrollment)
+    private enrollmentsRepository: Repository<Enrollment>,
   ) {}
 
   async create(createCourseDto: CreateCourseDto): Promise<Course> {
@@ -54,7 +57,7 @@ export class CoursesService {
   async findOne(id: string): Promise<Course> {
     const course = await this.coursesRepository.findOne({
       where: { id },
-      relations: ['teacher', 'teacher.user', 'enrollments', 'enrollments.student'],
+      relations: ['teacher', 'teacher.user', 'enrollments', 'enrollments.student', 'enrollments.student.user'],
     });
 
     if (!course) {
@@ -78,6 +81,31 @@ export class CoursesService {
       relations: ['teacher', 'teacher.user'],
       order: { code: 'ASC' },
     });
+  }
+
+  /**
+   * Find courses by teacher with student enrollment count
+   * Returns courses with additional studentCount field
+   */
+  async findByTeacherWithStudentCount(teacherId: string): Promise<any[]> {
+    const courses = await this.coursesRepository.find({
+      where: { teacherId, isActive: true },
+      relations: ['teacher', 'teacher.user', 'enrollments'],
+      order: { createdAt: 'DESC' },
+    });
+
+    // Add student count for each course
+    return Promise.all(
+      courses.map(async (course) => {
+        const enrollmentCount = await this.enrollmentsRepository.count({
+          where: { courseId: course.id, isActive: true },
+        });
+        return {
+          ...course,
+          studentCount: enrollmentCount,
+        };
+      }),
+    );
   }
 
   async update(id: string, updateCourseDto: UpdateCourseDto): Promise<Course> {

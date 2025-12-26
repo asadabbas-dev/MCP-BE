@@ -53,5 +53,19 @@ export class ResultsController {
     }
     return this.resultsService.calculateCGPA(studentId);
   }
+
+  /**
+   * Get grades for a course (Teacher only)
+   * GET /api/results/course/:courseId
+   */
+  @Get('course/:courseId')
+  @UseGuards(JwtAuthGuard, TeacherGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get grades for a course (Teacher only)', description: 'Retrieve all grades entered for a specific course' })
+  @ApiResponse({ status: 200, description: 'List of grades for the course' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Teacher access required' })
+  getCourseGrades(@Param('courseId') courseId: string) {
+    return this.resultsService.findByCourse(courseId);
+  }
 }
 

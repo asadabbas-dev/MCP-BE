@@ -28,6 +28,16 @@ export class CreateAssignmentDto {
   @IsString()
   courseId: string;
 
+  @ApiProperty({ description: 'Semester', example: 'Fall 2024' })
+  @IsNotEmpty()
+  @IsString()
+  semester: string;
+
+  @ApiPropertyOptional({ description: 'Section (optional - leave empty for all sections)', example: 'A' })
+  @IsOptional()
+  @IsString()
+  section?: string;
+
   @ApiPropertyOptional({ description: 'Teacher ID (optional - will use current user if not provided)' })
   @IsOptional()
   @IsString()

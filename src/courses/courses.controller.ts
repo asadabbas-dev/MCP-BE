@@ -15,6 +15,9 @@ import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { AdminGuard } from '../common/guards/admin.guard';
+import { TeacherGuard } from '../common/guards/teacher.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { User } from '../users/entities/user.entity';
 
 @ApiTags('courses')
 @Controller('courses')
@@ -44,6 +47,20 @@ export class CoursesController {
   @ApiResponse({ status: 200, description: 'List of courses' })
   findAll(@Query('semester') semester?: string, @Query('teacherId') teacherId?: string, @Query('search') search?: string) {
     return this.coursesService.findAll(search, semester, teacherId);
+  }
+
+  /**
+   * Get teacher's assigned courses with student count
+   * GET /api/courses/teacher/my-courses
+   */
+  @Get('teacher/my-courses')
+  @UseGuards(JwtAuthGuard, TeacherGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get teacher\'s assigned courses (Teacher only)', description: 'Retrieve all courses assigned to the authenticated teacher with student enrollment count' })
+  @ApiResponse({ status: 200, description: 'List of teacher courses with student counts' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Teacher access required' })
+  async getMyCourses(@CurrentUser() user: User) {
+    return this.coursesService.findByTeacherWithStudentCount(user.teacher.id);
   }
 
   @Get(':id')

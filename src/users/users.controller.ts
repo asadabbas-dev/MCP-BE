@@ -41,6 +41,37 @@ export class UsersController {
   }
 
   /**
+   * Update current user profile
+   * PATCH /api/users/profile
+   */
+  @Patch('profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Update current user profile', description: 'Update authenticated user profile information' })
+  @ApiResponse({ status: 200, description: 'Profile updated successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateProfile(
+    @CurrentUser() user: User,
+    @Body() updateUserDto: UpdateUserDto,
+  ) {
+    // Update user basic info
+    const updateData: any = {};
+    if (updateUserDto.fullName) updateData.fullName = updateUserDto.fullName;
+    if (updateUserDto.email) updateData.email = updateUserDto.email;
+    if (updateUserDto.phone !== undefined) updateData.phone = updateUserDto.phone;
+    if (updateUserDto.address !== undefined) updateData.address = updateUserDto.address;
+    if (updateUserDto.dateOfBirth) {
+      updateData.dateOfBirth = new Date(updateUserDto.dateOfBirth);
+    }
+    if (updateUserDto.password) updateData.password = updateUserDto.password;
+
+    if (Object.keys(updateData).length > 0) {
+      await this.usersService.update(user.id, updateData);
+    }
+
+    return this.usersService.findOne(user.id);
+  }
+
+  /**
    * Get users by role (Admin only)
    * GET /api/users?role=student|teacher|admin&search=query
    */
@@ -86,6 +117,22 @@ export class UsersController {
   @ApiResponse({ status: 403, description: 'Forbidden - Admin access required' })
   async getAdminStats() {
     return this.usersService.getAdminStats();
+  }
+
+  /**
+   * Get teacher dashboard statistics (Teacher only)
+   * GET /api/users/teacher/stats
+   */
+  @Get('teacher/stats')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get teacher dashboard statistics (Teacher only)', description: 'Retrieve statistics for teacher dashboard including assigned courses, total students, pending submissions, etc.' })
+  @ApiResponse({ status: 200, description: 'Teacher statistics' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getTeacherStats(@CurrentUser() user: User) {
+    if (user.role !== 'teacher' || !user.teacher) {
+      throw new Error('Teacher access required');
+    }
+    return this.usersService.getTeacherStats(user.teacher.id);
   }
 
   /**

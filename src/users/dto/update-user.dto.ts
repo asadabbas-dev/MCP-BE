@@ -42,5 +42,21 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @ApiPropertyOptional({
+    description: 'User address',
+    example: '123 Main St, City, Country',
+  })
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @ApiPropertyOptional({
+    description: 'User date of birth',
+    example: '1990-01-15',
+  })
+  @IsOptional()
+  @IsString()
+  dateOfBirth?: string;
 }
 
