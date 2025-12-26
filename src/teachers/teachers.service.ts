@@ -24,7 +24,7 @@ export class TeachersService {
   }
 
   /**
-   * Find teacher by user ID
+   * Find teacher by the user ID
    */
   async findByUserId(userId: string): Promise<Teacher | null> {
     return this.teachersRepository.findOne({
