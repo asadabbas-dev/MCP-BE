@@ -32,11 +32,37 @@ export class EnrollmentsService {
     return this.enrollmentsRepository.save(enrollment);
   }
 
-  async findAll(): Promise<Enrollment[]> {
-    return this.enrollmentsRepository.find({
-      relations: ['student', 'student.user', 'course', 'course.teacher'],
-      order: { enrolledAt: 'DESC' },
-    });
+  async findAll(semester?: string, section?: string, search?: string, isActive?: string): Promise<Enrollment[]> {
+    const queryBuilder = this.enrollmentsRepository
+      .createQueryBuilder('enrollment')
+      .leftJoinAndSelect('enrollment.student', 'student')
+      .leftJoinAndSelect('student.user', 'user')
+      .leftJoinAndSelect('enrollment.course', 'course')
+      .leftJoinAndSelect('course.teacher', 'teacher')
+      .leftJoinAndSelect('teacher.user', 'teacherUser')
+      .orderBy('enrollment.enrolledAt', 'DESC');
+
+    if (semester) {
+      queryBuilder.andWhere('course.semester = :semester', { semester });
+    }
+
+    if (section) {
+      queryBuilder.andWhere('enrollment.section = :section', { section });
+    }
+
+    if (isActive !== undefined) {
+      const active = isActive === 'true';
+      queryBuilder.andWhere('enrollment.isActive = :isActive', { isActive: active });
+    }
+
+    if (search) {
+      queryBuilder.andWhere(
+        '(user.fullName ILIKE :search OR user.email ILIKE :search OR course.name ILIKE :search OR course.code ILIKE :search)',
+        { search: `%${search}%` }
+      );
+    }
+
+    return queryBuilder.getMany();
   }
 
   async findByStudent(studentId: string): Promise<Enrollment[]> {
@@ -68,8 +94,17 @@ export class EnrollmentsService {
     return enrollment;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, user?: any): Promise<void> {
     const enrollment = await this.findOne(id);
+    
+    // If user is provided and not admin, check if they own this enrollment
+    if (user && user.role !== 'admin') {
+      const studentId = user.studentId || user.student?.id;
+      if (enrollment.studentId !== studentId) {
+        throw new BadRequestException('You can only remove your own enrollments');
+      }
+    }
+    
     enrollment.isActive = false;
     await this.enrollmentsRepository.save(enrollment);
   }
